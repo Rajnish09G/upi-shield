@@ -1,19 +1,30 @@
 import type { AppProps } from "next/app";
 import Link from "next/link";
+import { useState } from "react";
 import "../styles/globals.css";
 
 export default function App({ Component, pageProps }: AppProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
+    <div className={`app-shell ${sidebarOpen ? "" : "sidebar-collapsed"}`}>
+      <aside className="sidebar" aria-label="Primary navigation">
         <Link href="/" className="brand">
           <span className="brand-mark">U</span>
           <span>UPI <strong>Shield</strong></span>
         </Link>
+        <button
+          className="sidebar-toggle"
+          type="button"
+          aria-label={sidebarOpen ? "Close navigation" : "Open navigation"}
+          aria-expanded={sidebarOpen}
+          onClick={() => setSidebarOpen((open) => !open)}
+        >
+          {sidebarOpen ? "‹" : "›"}
+        </button>
         <div className="workspace-label">SECURITY OPERATIONS</div>
         <nav className="nav-list">
-          <Link href="/" className="nav-item"><span>◉</span> Triage queue</Link>
-          <Link href="/graph" className="nav-item"><span>⌘</span> Campaign graph</Link>
+          <Link href="/" className="nav-item"><span>◉</span><span>Triage queue</span></Link>
+          <Link href="/graph" className="nav-item"><span>⌘</span><span>Campaign graph</span></Link>
         </nav>
         <div className="sidebar-bottom">
           <div className="system-status"><span className="status-dot" /> Systems operational</div>
