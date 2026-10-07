@@ -19,8 +19,8 @@ button, input, select { font: inherit; }
 .nav-list { display: grid; gap: 5px; }
 .nav-item { display: flex; align-items: center; gap: 13px; color: var(--muted); padding: 12px; border-radius: 8px; font-size: 13px; }
 .nav-item span { width: 18px; text-align: center; color: #66829b; }
-.nav-item:hover, .nav-item:first-child { background: #dff3e5; color: var(--text); }
-.nav-item:first-child span { color: var(--cyan); }
+.nav-item:hover, .nav-item.active { background: #dff3e5; color: var(--text); }
+.nav-item.active span { color: var(--cyan); }
 .sidebar-bottom { margin-top: auto; }
 .system-status { color: #91b4ae; border-top: 1px solid var(--border); padding: 17px 10px; font-size: 11px; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 7px; box-shadow: 0 0 8px var(--green); }

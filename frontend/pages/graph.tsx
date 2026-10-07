@@ -8,7 +8,7 @@ type GraphNode = SimulationNodeDatum & { id: string; label?: string; type: strin
 export default function GraphPage() {
   const ref = useRef<SVGSVGElement>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
-  const groupRef = useRef<SVGGElement | null>(null);
+  const nodesRef = useRef<GraphNode[]>([]);
   const [graph, setGraph] = useState<{ nodes: GraphNode[]; links: { source: string; target: string }[] }>({ nodes: [], links: [] });
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/graph`)
@@ -25,12 +25,12 @@ export default function GraphPage() {
     const links = graph.links;
     const simulationNodes = nodes.map((node) => ({ ...node }));
     const simulationLinks = links.map((link) => ({ ...link }));
+    nodesRef.current = simulationNodes;
     const simulation = d3.forceSimulation(simulationNodes)
       .force("link", d3.forceLink(simulationLinks).id((node: any) => node.id).distance(100))
       .force("charge", d3.forceManyBody().strength(-160))
       .force("center", d3.forceCenter(280, 165));
     const group = svg.append("g");
-    groupRef.current = group.node();
     const linkLines = group.selectAll("line").data(simulationLinks).join("line").attr("stroke", "#9bc9a7").attr("stroke-width", 2);
     const nodeItems = group.selectAll("g").data(simulationNodes).join("g");
     nodeItems.append("circle").attr("r", (node) => node.type === "Domain" ? 15 : 11).attr("fill", (node) => node.type === "Domain" ? "#168d49" : "#a6d9b2").attr("stroke", "#4b9f63");
@@ -39,20 +39,27 @@ export default function GraphPage() {
       linkLines.attr("x1", (link: any) => link.source.x).attr("y1", (link: any) => link.source.y).attr("x2", (link: any) => link.target.x).attr("y2", (link: any) => link.target.y);
       nodeItems.attr("transform", (node: any) => `translate(${node.x},${node.y})`);
     });
+    simulation.on("end", fitGraph);
     return () => { simulation.stop(); };
   }, [graph]);
   const fitGraph = () => {
-    if (!ref.current || !groupRef.current || !zoomRef.current) return;
-    const bounds = groupRef.current.getBBox();
-    if (!bounds.width || !bounds.height) return;
+    if (!ref.current || !zoomRef.current || !nodesRef.current.length) return;
+    const positioned = nodesRef.current.filter((node) => Number.isFinite(node.x) && Number.isFinite(node.y));
+    if (!positioned.length) return;
+    const minX = Math.min(...positioned.map((node) => node.x ?? 0));
+    const maxX = Math.max(...positioned.map((node) => node.x ?? 0));
+    const minY = Math.min(...positioned.map((node) => node.y ?? 0));
+    const maxY = Math.max(...positioned.map((node) => node.y ?? 0));
+    const width = Math.max(maxX - minX, 80);
+    const height = Math.max(maxY - minY, 80);
     const padding = 35;
     const scale = Math.min(
-      560 / (bounds.width + padding * 2),
-      330 / (bounds.height + padding * 2),
+      560 / (width + padding * 2),
+      330 / (height + padding * 2),
       1.8,
     );
-    const x = 280 - scale * (bounds.x + bounds.width / 2);
-    const y = 165 - scale * (bounds.y + bounds.height / 2);
+    const x = 280 - scale * ((minX + maxX) / 2);
+    const y = 165 - scale * ((minY + maxY) / 2);
     d3.select(ref.current).transition().duration(450).call(
       zoomRef.current.transform,
       d3.zoomIdentity.translate(x, y).scale(scale),

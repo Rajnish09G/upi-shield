@@ -1,10 +1,12 @@
 import type { AppProps } from "next/app";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useState } from "react";
 import "../styles/globals.css";
 
 export default function App({ Component, pageProps }: AppProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const router = useRouter();
   return (
     <div className={`app-shell ${sidebarOpen ? "" : "sidebar-collapsed"}`}>
       <aside className="sidebar" aria-label="Primary navigation">
@@ -23,8 +25,8 @@ export default function App({ Component, pageProps }: AppProps) {
         </button>
         <div className="workspace-label">SECURITY OPERATIONS</div>
         <nav className="nav-list">
-          <Link href="/" className="nav-item"><span>◉</span><span>Triage queue</span></Link>
-          <Link href="/graph" className="nav-item"><span>⌘</span><span>Campaign graph</span></Link>
+          <Link href="/" className={`nav-item ${router.pathname === "/" ? "active" : ""}`}><span>◉</span><span>Triage queue</span></Link>
+          <Link href="/graph" className={`nav-item ${router.pathname === "/graph" ? "active" : ""}`}><span>⌘</span><span>Campaign graph</span></Link>
         </nav>
         <div className="sidebar-bottom">
           <div className="system-status"><span className="status-dot" /> Systems operational</div>
