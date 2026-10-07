@@ -3,3 +3,4 @@ https://www.paytm.com,paytm,data/captures/0bc34865de778168.png,data/captures/0bc
 https://www.phonepe.com/,phonepe,data/captures/d6ff63e884c5fa31.png,data/captures/d6ff63e884c5fa31.html,benign
 https://pay.google.com/about/,gpay,data/captures/fe956affecb9b856.png,data/captures/fe956affecb9b856.html,benign
 https://sbi.co.in/,sbi,data/captures/7280077d954bdddc.png,data/captures/7280077d954bdddc.html,benign
+http://127.0.0.1:8765/upi-payment-simulation.html,upi-simulation,data/captures/e3d7367017162583.png,data/captures/e3d7367017162583.html,phishing

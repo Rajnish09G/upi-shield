@@ -43,6 +43,8 @@ def score(
     final_score = combine_signals(similarity, behavioral)
     if official_brand and not suspicious_behavior:
         final_score = min(final_score, 0.3)
+    if behavioral.external_form_action and behavioral.sensitive_inputs:
+        final_score = max(final_score, 0.65)
     verdict = (
         "phishing" if final_score >= phishing_threshold
         else "suspicious" if final_score >= suspicious_threshold
