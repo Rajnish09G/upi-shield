@@ -1,4 +1,6 @@
-from ..db import neo4j_driver
+from urllib.parse import urlparse
+
+from ..db import get_db_session, get_detections, neo4j_driver
 
 SCHEMA = (
     "CREATE CONSTRAINT domain_unique IF NOT EXISTS FOR (d:Domain) REQUIRE d.name IS UNIQUE",
@@ -63,4 +65,22 @@ async def graph_snapshot() -> dict:
                 "source": str(row["a_id"]), "target": str(row["b_id"]),
                 "relation": row["relation"],
             })
+    if nodes:
+        return {"nodes": list(nodes.values()), "links": links}
+
+    # Keep the analyst graph useful before infrastructure observations are
+    # ingested into Neo4j: project persisted detections by domain and brand.
+    async for db_session in get_db_session():
+        detections = await get_detections(db_session)
+    for detection in detections:
+        domain = urlparse(detection.url).netloc or detection.url
+        brand = detection.brand or "unidentified"
+        nodes.setdefault(domain, {"id": domain, "type": "Domain"})
+        brand_id = f"brand:{brand}"
+        nodes.setdefault(brand_id, {"id": brand_id, "label": brand, "type": "Brand"})
+        links.append({
+            "source": domain,
+            "target": brand_id,
+            "relation": "MATCHES_BRAND",
+        })
     return {"nodes": list(nodes.values()), "links": links}
