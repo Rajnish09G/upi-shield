@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
+import uuid
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi import Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -113,6 +114,48 @@ async def capture_and_detect(request: CaptureRequest) -> DetectionResponse:
     async for session in get_db_session():
         record = await save_detection(
             session, detection, capture_result["screenshot"], capture_result["dom"]
+        )
+    return DetectionResponse(
+        id=record.id, url=record.url, brand=record.brand, score=record.score,
+        verdict=record.verdict, behavioral=record.signals,
+        screenshot=record.screenshot, dom=record.dom,
+        created_at=record.created_at,
+    )
+
+
+@app.post("/analyze-upload", response_model=DetectionResponse, dependencies=[Depends(require_api_key)])
+async def analyze_uploaded_screenshot(
+    url: str = Form(...),
+    brand_keywords: str = Form(""),
+    screenshot: UploadFile = File(...),
+) -> DetectionResponse:
+    """Score an analyst-supplied screenshot without crawling the submitted URL."""
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="URL must start with http:// or https://")
+    if screenshot.content_type not in {"image/png", "image/jpeg", "image/webp"}:
+        raise HTTPException(status_code=400, detail="Upload a PNG, JPEG, or WebP screenshot")
+    suffix = Path(screenshot.filename or "").suffix.lower()
+    if suffix not in {".png", ".jpg", ".jpeg", ".webp"}:
+        suffix = ".png" if screenshot.content_type == "image/png" else ".jpg"
+    output_dir = Path("data/captures")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    screenshot_path = output_dir / f"upload-{uuid.uuid4().hex}{suffix}"
+    screenshot_path.write_bytes(await screenshot.read())
+    dom_path = output_dir / f"{screenshot_path.stem}.html"
+    dom_path.write_text(
+        f"<html><head><title>Uploaded analyst screenshot</title></head>"
+        f"<body data-source-url=\"{url}\"></body></html>",
+        encoding="utf-8",
+    )
+    keywords = [item.strip() for item in brand_keywords.split(",") if item.strip()]
+    settings = get_settings()
+    detection = score(
+        url, str(screenshot_path), str(dom_path), keywords,
+        settings.phishing_threshold, settings.suspicious_threshold,
+    )
+    async for session in get_db_session():
+        record = await save_detection(
+            session, detection, str(screenshot_path), str(dom_path)
         )
     return DetectionResponse(
         id=record.id, url=record.url, brand=record.brand, score=record.score,
