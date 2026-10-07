@@ -7,8 +7,10 @@ type GraphNode = SimulationNodeDatum & { id: string; label?: string; type: strin
 
 export default function GraphPage() {
   const ref = useRef<SVGSVGElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
   const nodesRef = useRef<GraphNode[]>([]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [graph, setGraph] = useState<{ nodes: GraphNode[]; links: { source: string; target: string }[] }>({ nodes: [], links: [] });
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/graph`)
@@ -65,5 +67,22 @@ export default function GraphPage() {
       d3.zoomIdentity.translate(x, y).scale(scale),
     );
   };
-  return <><header className="page-header"><div><div className="eyebrow">NETWORK INTELLIGENCE / CAMPAIGNS</div><h1>Campaign graph</h1><p>Explore infrastructure shared across detected sites and payment identities.</p></div><Link href="/" className="button">← Back to triage</Link></header><section className="panel graph-panel"><div className="toolbar"><h2>Relationship map <span className="stat-label">· detection projection</span></h2><button className="button" onClick={fitGraph}>Fit to screen</button></div><svg ref={ref} viewBox="0 0 560 330" role="img" aria-label="Campaign relationship graph" /><div className="graph-legend"><span><i className="legend-dot" style={{ background: "var(--cyan)" }} />Domain</span><span><i className="legend-dot" style={{ background: "#a6d9b2" }} />Brand match</span><span>Neo4j data is used when available</span></div></section><section className="panel graph-explainer"><div className="eyebrow">HOW IT WORKS</div><h2>Read the campaign graph</h2><div className="graph-steps"><div><strong>1. Domain</strong><p>Each observed URL becomes a domain node, such as <code>www.paytm.com</code>.</p></div><div><strong>2. Brand match</strong><p>The visual detector assigns the closest known brand from the screenshot reference set.</p></div><div><strong>3. Relationship</strong><p>A line labelled <code>MATCHES_BRAND</code> connects the domain to the matched brand.</p></div><div><strong>4. Campaign view</strong><p>Shared hosts, certificates, IPs, wallets or kit hashes become additional Neo4j nodes when ingested.</p></div></div></section></>;
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === panelRef.current);
+      window.requestAnimationFrame(fitGraph);
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+  const handleFitToScreen = async () => {
+    if (!panelRef.current) return;
+    if (document.fullscreenElement === panelRef.current) {
+      await document.exitFullscreen();
+      return;
+    }
+    await panelRef.current.requestFullscreen();
+    window.requestAnimationFrame(fitGraph);
+  };
+  return <><header className="page-header"><div><div className="eyebrow">NETWORK INTELLIGENCE / CAMPAIGNS</div><h1>Campaign graph</h1><p>Explore infrastructure shared across detected sites and payment identities.</p></div><Link href="/" className="button">← Back to triage</Link></header><section ref={panelRef} className={`panel graph-panel${isFullscreen ? " graph-panel-fullscreen" : ""}`}><div className="toolbar"><h2>Relationship map <span className="stat-label">· detection projection</span></h2><button className="button" onClick={handleFitToScreen}>{isFullscreen ? "Exit full screen" : "Fit to screen"}</button></div><svg ref={ref} viewBox="0 0 560 330" role="img" aria-label="Campaign relationship graph" /><div className="graph-legend"><span><i className="legend-dot" style={{ background: "var(--cyan)" }} />Domain</span><span><i className="legend-dot" style={{ background: "#a6d9b2" }} />Brand match</span><span>Neo4j data is used when available</span></div></section><section className="panel graph-explainer"><div className="eyebrow">HOW IT WORKS</div><h2>Read the campaign graph</h2><div className="graph-steps"><div><strong>1. Domain</strong><p>Each observed URL becomes a domain node, such as <code>www.paytm.com</code>.</p></div><div><strong>2. Brand match</strong><p>The visual detector assigns the closest known brand from the screenshot reference set.</p></div><div><strong>3. Relationship</strong><p>A line labelled <code>MATCHES_BRAND</code> connects the domain to the matched brand.</p></div><div><strong>4. Campaign view</strong><p>Shared hosts, certificates, IPs, wallets or kit hashes become additional Neo4j nodes when ingested.</p></div></div></section></>;
 }
